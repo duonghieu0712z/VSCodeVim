@@ -21,7 +21,8 @@ class StatusBarImpl implements vscode.Disposable {
     this.statusBarItem = vscode.window.createStatusBarItem(
       'primary',
       vscode.StatusBarAlignment.Left,
-      Number.MIN_SAFE_INTEGER, // Furthest right on the left
+      Number.MAX_SAFE_INTEGER,
+      // Number.MIN_SAFE_INTEGER, // Furthest right on the left
     );
     this.statusBarItem.name = 'Vim Command Line';
     this.statusBarItem.show();
