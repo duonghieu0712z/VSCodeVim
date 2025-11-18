@@ -19,7 +19,7 @@ import { Position } from 'vscode';
 import { Jump } from '../jumps/jump';
 import { globalState } from '../state/globalState';
 import { Mode } from '../mode/mode';
-import { ErrorCode, VimError } from '../error';
+import { VimError } from '../error';
 import { Logger } from '../util/logger';
 import { earlierOf } from '../common/motion/position';
 
@@ -96,12 +96,21 @@ class DocumentChange {
   }
 }
 
-export interface IMark {
+interface IMarkBase {
   name: string;
   position: Position;
-  isUppercaseMark: boolean;
-  document?: vscode.TextDocument; // only required when using global marks (isUppercaseMark is true)
 }
+
+export interface ILocalMark extends IMarkBase {
+  isUppercaseMark: false;
+}
+
+export interface IGlobalMark extends IMarkBase {
+  isUppercaseMark: true;
+  document: vscode.TextDocument;
+}
+
+export type IMark = ILocalMark | IGlobalMark;
 
 /**
  * An undo's worth of changes; generally corresponds to a single action.
@@ -143,7 +152,7 @@ class HistoryStep {
   /**
    * "global" marks which operate across files. (when IMark.name is uppercase)
    */
-  static globalMarks: IMark[] = [];
+  static globalMarks: IGlobalMark[] = [];
 
   constructor(init: { marks: IMark[]; changes?: DocumentChange[]; cameFromU?: boolean }) {
     this.changes = init.changes ?? [];
@@ -350,7 +359,7 @@ class ChangeList {
   public nextChangePosition(): Position | VimError {
     if (this.index === undefined) {
       if (this.changeLocations.length === 0) {
-        return VimError.fromCode(ErrorCode.ChangeListIsEmpty);
+        return VimError.ChangeListIsEmpty();
       }
       this.index = this.changeLocations.length - 1;
       return this.changeLocations[this.index];
@@ -358,14 +367,14 @@ class ChangeList {
       this.index++;
       return this.changeLocations[this.index];
     } else {
-      return VimError.fromCode(ErrorCode.AtEndOfChangeList);
+      return VimError.AtEndOfChangeList();
     }
   }
 
   public prevChangePosition(): Position | VimError {
     if (this.index === undefined) {
       if (this.changeLocations.length === 0) {
-        return VimError.fromCode(ErrorCode.ChangeListIsEmpty);
+        return VimError.ChangeListIsEmpty();
       }
       this.index = this.changeLocations.length - 1;
       return this.changeLocations[this.index];
@@ -373,7 +382,7 @@ class ChangeList {
       this.index--;
       return this.changeLocations[this.index];
     } else {
-      return VimError.fromCode(ErrorCode.AtStartOfChangeList);
+      return VimError.AtStartOfChangeList();
     }
   }
 }
@@ -565,12 +574,18 @@ export class HistoryTracker {
       }
     } else {
       const isUppercaseMark = markName.toUpperCase() === markName;
-      const newMark: IMark = {
-        position,
-        name: markName,
-        isUppercaseMark,
-        document: isUppercaseMark ? document : undefined,
-      };
+      const newMark: IMark = isUppercaseMark
+        ? {
+            position,
+            name: markName,
+            isUppercaseMark,
+            document,
+          }
+        : {
+            position,
+            name: markName,
+            isUppercaseMark,
+          };
       this.putMarkInList(newMark);
     }
   }
@@ -651,8 +666,8 @@ export class HistoryTracker {
    * Gets all local marks.  I.e., marks that are specific for the current
    * editor.
    */
-  public getLocalMarks(): IMark[] {
-    return [...this.undoStack.getCurrentMarkList()];
+  public getLocalMarks(): ILocalMark[] {
+    return [...this.undoStack.getCurrentMarkList().filter((mark) => !mark.isUppercaseMark)];
   }
 
   /**

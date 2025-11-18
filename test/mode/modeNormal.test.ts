@@ -120,12 +120,15 @@ suite('Mode Normal', () => {
     end: ['one', '|two'],
   });
 
-  newTest({
-    title: 'Can handle ddp',
-    start: ['|one', 'two'],
-    keysPressed: 'ddp',
-    end: ['two', '|one'],
-  });
+  for (const useSystemClipboard of [true, false]) {
+    newTest({
+      title: 'Can handle ddp',
+      config: { useSystemClipboard },
+      start: ['|one', 'two'],
+      keysPressed: 'ddp',
+      end: ['two', '|one'],
+    });
+  }
 
   newTest({
     title: "Can handle 'de'",
@@ -520,6 +523,14 @@ suite('Mode Normal', () => {
     start: ['print(|"hello")'],
     keysPressed: 'cib',
     end: ['print(|)'],
+    endMode: Mode.Insert,
+  });
+
+  newTest({
+    title: "Can handle 'cib' between sets of parentheses",
+    start: ['one (two) th|ree (four) five'],
+    keysPressed: 'cib',
+    end: ['one (two) three (|) five'],
     endMode: Mode.Insert,
   });
 
