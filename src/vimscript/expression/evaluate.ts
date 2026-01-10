@@ -1,22 +1,29 @@
+import { escapeRegExp, isInteger } from 'lodash';
 import { all, alt } from 'parsimmon';
-import { displayValue } from './displayValue';
+import { Position } from 'vscode';
 import { configuration } from '../../configuration/configuration';
 import { VimError } from '../../error';
+import { Mode } from '../../mode/mode';
+import { Register, RegisterMode } from '../../register/register';
 import { globalState } from '../../state/globalState';
+import { RecordedState } from '../../state/recordedState';
+import { VimState } from '../../state/vimState';
+import { Pattern, SearchDirection } from '../pattern';
 import {
-  bool,
-  float,
-  funcref,
-  int,
-  str,
-  list,
-  funcCall,
   blob,
+  bool,
   dictionary,
+  float,
+  funcCall,
+  funcref,
   funcrefCall,
+  int,
+  list,
+  str,
   toExpr,
   variable,
 } from './build';
+import { displayValue } from './displayValue';
 import { expressionParser, floatParser, numberParser } from './parser';
 import {
   BinaryOp,
@@ -32,13 +39,6 @@ import {
   Value,
   VariableExpression,
 } from './types';
-import { Pattern, SearchDirection } from '../pattern';
-import { escapeRegExp, isInteger } from 'lodash';
-import { VimState } from '../../state/vimState';
-import { Position } from 'vscode';
-import { Mode } from '../../mode/mode';
-import { Register, RegisterMode } from '../../register/register';
-import { RecordedState } from '../../state/recordedState';
 
 // ID of next lambda; incremented each time one is created
 let lambdaNumber = 1;
@@ -1174,7 +1174,6 @@ export class EvaluationContext {
         const guard: never = reg.registerMode;
         return str('');
       }
-      // TODO: gettext()
       case 'gettext': {
         const [s] = getArgs(1);
         return str(toString(s!));
@@ -1280,11 +1279,7 @@ export class EvaluationContext {
           if (Array.isArray(x)) {
             return list(x.map(fromJSObj));
           } else if (typeof x === 'number') {
-            if (isInteger(x)) {
-              return int(x);
-            } else {
-              return float(x);
-            }
+            return isInteger(x) ? int(x) : float(x);
           } else if (typeof x === 'string') {
             return str(x);
           } else {
@@ -1774,7 +1769,7 @@ export class EvaluationContext {
           let prev: Value = l!.items[0];
           for (let i = 1; i < l!.items.length; ) {
             const val = l!.items[i];
-            if (this.evaluateComparison('==', true, prev, val)) {
+            if (prev.type === val.type && this.evaluateComparison('==', true, prev, val)) {
               l!.items.splice(i, 1);
             } else {
               prev = val;

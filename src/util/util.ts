@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { Cursor } from '../common/motion/cursor';
-import { VimState } from '../state/vimState';
 import { VimError } from '../error';
+import { VimState } from '../state/vimState';
 
 /**
  * We used to have an issue where we would do something like execute a VSCode
@@ -12,7 +12,7 @@ import { VimError } from '../error';
  * @deprecated Calls to this should probably be replaced with calls to `ModeHandler::syncCursors()` or something...
  */
 export function getCursorsAfterSync(editor: vscode.TextEditor): Cursor[] {
-  return editor.selections.map((x) => Cursor.FromVSCodeSelection(x));
+  return editor.selections.map((x) => Cursor.fromSelection(x));
 }
 
 export function clamp(num: number, min: number, max: number) {

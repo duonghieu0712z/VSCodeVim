@@ -1,13 +1,13 @@
+import { Position, Range } from 'vscode';
+import { PositionDiff } from '../../common/motion/position';
 import { configuration } from '../../configuration/configuration';
+import { VimError } from '../../error';
 import { Mode } from '../../mode/mode';
 import { Register, RegisterMode } from '../../register/register';
 import { VimState } from '../../state/vimState';
+import { StatusBar } from '../../statusBar';
 import { BaseOperator } from '../operator';
 import { RegisterAction } from './../base';
-import { StatusBar } from '../../statusBar';
-import { VimError } from '../../error';
-import { Position, Range } from 'vscode';
-import { PositionDiff } from '../../common/motion/position';
 
 @RegisterAction
 class ReplaceOperator extends BaseOperator {
@@ -25,7 +25,7 @@ class ReplaceOperator extends BaseOperator {
   public async run(vimState: VimState, start: Position, end: Position): Promise<void> {
     const range =
       vimState.currentRegisterMode === RegisterMode.LineWise
-        ? new Range(start.getLineBegin(), end.getLineEndIncludingEOL())
+        ? new Range(start.getLineBegin(), end.getLineEnd())
         : new Range(start, end.getRight());
 
     const register = await Register.get(vimState.recordedState.registerName, this.multicursorIndex);
@@ -39,12 +39,11 @@ class ReplaceOperator extends BaseOperator {
 
     const replaceWith = register.text as string;
 
-    vimState.recordedState.transformer.addTransformation({
-      type: 'replaceText',
+    vimState.recordedState.transformer.replace(
       range,
-      text: replaceWith,
-      diff: PositionDiff.exactPosition(getCursorPosition(vimState, range, replaceWith)),
-    });
+      replaceWith,
+      PositionDiff.exactPosition(getCursorPosition(vimState, range, replaceWith)),
+    );
 
     await vimState.setCurrentMode(Mode.Normal);
   }
